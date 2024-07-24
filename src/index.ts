@@ -15,11 +15,13 @@ const debug = createDebug('bot:inline_query');
 bot.on('inline_query', async (ctx) => {
   debug('Triggered inline query');
 
-  const query = ctx.inlineQuery.query;
+  let query = ctx.inlineQuery.query;
 
   if (!query.endsWith('?')) {
     return;
   }
+
+  query = query.slice(0, -1);
 
   let chatGptAnswer: string;
   try {
