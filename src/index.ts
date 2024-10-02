@@ -58,6 +58,55 @@ bot.on('inline_query', async (ctx) => {
   }
 });
 
+const botNames = ['бот', 'бит', 'бiт', 'біт', 'bot', 'bit'];
+
+bot.on('message', async (ctx) => {
+  const messageText = 'text' in ctx.message ? ctx.message.text : '';
+  const quotedMessage =
+    'reply_to_message' in ctx.message && ctx.message.reply_to_message
+      ? 'text' in ctx.message.reply_to_message
+        ? ctx.message.reply_to_message.text
+        : ''
+      : '';
+
+  // Check if the message starts with a bot name followed by a comma
+  const startsWithBotName = botNames.some((name) =>
+    messageText.toLowerCase().startsWith(`${name.toLowerCase()},`)
+  );
+
+  // Check if the message is just the bot name and is replying to another message
+  const isQuotedBotName =
+    botNames.some((name) => messageText.toLowerCase() === name.toLowerCase()) &&
+    quotedMessage;
+
+  let query = '';
+
+  if (startsWithBotName) {
+    // Extract the query after the bot name and comma
+    query = messageText.split(',')[1]?.trim();
+  } else if (isQuotedBotName) {
+    // Use the quoted message as the query
+    query = quotedMessage;
+  }
+
+  if (query) {
+    let chatGptAnswer: string;
+    try {
+      chatGptAnswer = await getSingleCompletion(query);
+    } catch (err) {
+      console.error('Error getting completion from OpenAI:', err);
+      return;
+    }
+
+    try {
+      // Reply with the generated answer
+      return await ctx.reply(chatGptAnswer);
+    } catch (err) {
+      console.error('Error sending reply:', err);
+    }
+  }
+});
+
 //prod mode (Vercel)
 export const startVercel = async (req: VercelRequest, res: VercelResponse) => {
   await production(req, res, bot);
