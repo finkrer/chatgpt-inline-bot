@@ -65,7 +65,7 @@ export const getMessageCompletion = async ({
   } else if (replyToMessage) {
     messages.push({
       role: 'system',
-      content: `The user wants you to comment on another message. It may contain an instruction to follow, a question to answer or perhaps a claim to verify.`,
+      content: `The user wants you to comment on another message. It may contain an instruction to follow, a question to answer, a topic to explain or perhaps a claim to verify.`,
     });
     messages.push({
       role: 'user',
