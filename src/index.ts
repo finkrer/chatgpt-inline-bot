@@ -72,7 +72,7 @@ const botNames = [
 bot.on('message', async (ctx) => {
   debug(JSON.stringify(ctx.message, null, 2));
   const messageText = 'text' in ctx.message ? ctx.message.text : '';
-  const quotedMessage =
+  const replyText =
     'reply_to_message' in ctx.message && ctx.message.reply_to_message
       ? 'text' in ctx.message.reply_to_message
         ? ctx.message.reply_to_message.text
@@ -96,18 +96,20 @@ bot.on('message', async (ctx) => {
     ctx.message.reply_to_message?.from?.username === ctx.botInfo.username;
 
   let query = '';
+  let quotedMessage = '';
 
   if (isReplyToBot) {
     query = messageText;
+    quotedMessage = replyText || '';
   } else if (startsWithBotName) {
     // Extract the query after the bot name and comma
     query = messageText.split(',')[1]?.trim();
+    quotedMessage = replyText || '';
   } else if (isBotName && quotedMessage) {
-    // Use the quoted message as the query
-    query = quotedMessage;
+    quotedMessage = replyText || '';
   }
 
-  if (query) {
+  if (query || quotedMessage) {
     let chatGptAnswer: string;
     try {
       chatGptAnswer = await getMessageCompletion({
@@ -123,7 +125,11 @@ bot.on('message', async (ctx) => {
     try {
       // Reply with the generated answer
       return await ctx.reply(chatGptAnswer, {
-        reply_to_message_id: ctx.message.message_id,
+        reply_to_message_id: query
+          ? ctx.message.message_id
+          : 'reply_to_message' in ctx.message
+          ? ctx.message.reply_to_message?.message_id
+          : undefined,
       });
     } catch (err) {
       console.error('Error sending reply:', err);
