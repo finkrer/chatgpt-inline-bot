@@ -70,11 +70,14 @@ const botNames = [
 ];
 
 bot.on('message', async (ctx) => {
+  debug(JSON.stringify(ctx.message, null, 2));
   const messageText = 'text' in ctx.message ? ctx.message.text : '';
   const quotedMessage =
     'reply_to_message' in ctx.message && ctx.message.reply_to_message
       ? 'text' in ctx.message.reply_to_message
         ? ctx.message.reply_to_message.text
+        : 'caption' in ctx.message.reply_to_message
+        ? ctx.message.reply_to_message.caption
         : ''
       : '';
 
@@ -88,9 +91,15 @@ bot.on('message', async (ctx) => {
     (name) => messageText.toLowerCase() === name.toLowerCase()
   );
 
+  const isReplyToBot =
+    'reply_to_message' in ctx.message &&
+    ctx.message.reply_to_message?.from?.username === ctx.botInfo.username;
+
   let query = '';
 
-  if (startsWithBotName) {
+  if (isReplyToBot) {
+    query = messageText;
+  } else if (startsWithBotName) {
     // Extract the query after the bot name and comma
     query = messageText.split(',')[1]?.trim();
   } else if (isBotName && quotedMessage) {
@@ -104,6 +113,7 @@ bot.on('message', async (ctx) => {
       chatGptAnswer = await getMessageCompletion({
         query,
         quotedMessage,
+        isReplyToBot,
       });
     } catch (err) {
       console.error('Error getting completion from OpenAI:', err);

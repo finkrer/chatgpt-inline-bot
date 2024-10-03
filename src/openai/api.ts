@@ -26,13 +26,15 @@ export const getInlineCompletion = async (prompt: string) => {
 };
 
 export const getMessageCompletion = async ({
-  query: prompt,
-  quotedMessage: replyToMessage,
+  query,
+  quotedMessage,
+  isReplyToBot = false,
 }: {
   query?: string;
   quotedMessage?: string;
+  isReplyToBot?: boolean;
 }) => {
-  debug(`triggered message completion with prompt: ${prompt}`);
+  debug(`triggered message completion with prompt: ${query}`);
   const messages: ChatCompletionRequestMessage[] = [
     {
       role: 'system',
@@ -40,36 +42,49 @@ export const getMessageCompletion = async ({
     },
   ];
 
-  if (prompt && replyToMessage) {
+  if (isReplyToBot) {
+    messages.push({
+      role: 'system',
+      content: `The user answered to your message.`,
+    });
+    messages.push({
+      role: 'assistant',
+      content: quotedMessage,
+    });
+    messages.push({
+      role: 'user',
+      content: query,
+    });
+  } else if (query && quotedMessage) {
     messages.push({
       role: 'system',
       content: `The user asked you a question about another message.`,
     });
     messages.push({
       role: 'user',
-      content: prompt,
+      content: query,
     });
     messages.push({
       role: 'user',
-      content: replyToMessage,
+      content: quotedMessage,
     });
-  } else if (prompt) {
+  } else if (query) {
     messages.push({
       role: 'system',
       content: `The user asked you a question.`,
     });
     messages.push({
       role: 'user',
-      content: prompt,
+      content: query,
     });
-  } else if (replyToMessage) {
+  } else if (quotedMessage) {
     messages.push({
       role: 'system',
       content: `The user wants you to comment on another message. It may contain an instruction to follow, a question to answer, a topic to explain or perhaps a claim to verify.`,
     });
     messages.push({
       role: 'user',
-      content: replyToMessage,
+      content: quotedMessage,
     });
   }
 
