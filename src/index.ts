@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { development, production } from './core';
 import { nanoid } from 'nanoid';
-import { getSingleCompletion } from './openai/api';
+import { getInlineCompletion, getMessageCompletion } from './openai/api';
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const ENVIRONMENT = process.env.NODE_ENV || '';
@@ -25,7 +25,7 @@ bot.on('inline_query', async (ctx) => {
 
   let chatGptAnswer: string;
   try {
-    chatGptAnswer = await getSingleCompletion(query);
+    chatGptAnswer = await getInlineCompletion(query);
   } catch {
     return;
   }
@@ -58,7 +58,16 @@ bot.on('inline_query', async (ctx) => {
   }
 });
 
-const botNames = ['бот', 'бит', 'бiт', 'біт', 'bot', 'bit'];
+const botNames = [
+  'бот',
+  'бит',
+  'бiт',
+  'біт',
+  'bot',
+  'bit',
+  'битингс',
+  'bitings',
+];
 
 bot.on('message', async (ctx) => {
   const messageText = 'text' in ctx.message ? ctx.message.text : '';
@@ -75,16 +84,16 @@ bot.on('message', async (ctx) => {
   );
 
   // Check if the message is just the bot name and is replying to another message
-  const isQuotedBotName =
-    botNames.some((name) => messageText.toLowerCase() === name.toLowerCase()) &&
-    quotedMessage;
+  const isBotName = botNames.some(
+    (name) => messageText.toLowerCase() === name.toLowerCase()
+  );
 
   let query = '';
 
   if (startsWithBotName) {
     // Extract the query after the bot name and comma
     query = messageText.split(',')[1]?.trim();
-  } else if (isQuotedBotName) {
+  } else if (isBotName && quotedMessage) {
     // Use the quoted message as the query
     query = quotedMessage;
   }
@@ -92,7 +101,10 @@ bot.on('message', async (ctx) => {
   if (query) {
     let chatGptAnswer: string;
     try {
-      chatGptAnswer = await getSingleCompletion(query);
+      chatGptAnswer = await getMessageCompletion({
+        query,
+        quotedMessage,
+      });
     } catch (err) {
       console.error('Error getting completion from OpenAI:', err);
       return;
@@ -100,7 +112,9 @@ bot.on('message', async (ctx) => {
 
     try {
       // Reply with the generated answer
-      return await ctx.reply(chatGptAnswer);
+      return await ctx.reply(chatGptAnswer, {
+        reply_to_message_id: ctx.message.message_id,
+      });
     } catch (err) {
       console.error('Error sending reply:', err);
     }
