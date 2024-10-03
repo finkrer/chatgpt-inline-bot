@@ -105,7 +105,7 @@ bot.on('message', async (ctx) => {
     // Extract the query after the bot name and comma
     query = messageText.split(',')[1]?.trim();
     quotedMessage = replyText || '';
-  } else if (isBotName && quotedMessage) {
+  } else if (isBotName) {
     quotedMessage = replyText || '';
   }
 
