@@ -126,6 +126,7 @@ bot.on('message', async (ctx) => {
       // Reply with the generated answer
       return await ctx.reply(chatGptAnswer, {
         parse_mode: 'Markdown',
+        disable_web_page_preview: true,
         reply_to_message_id: query
           ? ctx.message.message_id
           : 'reply_to_message' in ctx.message

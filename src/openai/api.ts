@@ -8,6 +8,15 @@ const openai = new OpenAI({
 
 const debug = createDebug('bot:inline_query');
 
+const systemPrompt = `You are a question answering bot for the Telegram messenger.
+People call you with a message and you answer the question right in the chat.
+The answer must be concise and to the point, can under no circumstances be longer than 350 characters, and must contain only the facts requested without expanding on them.
+Since searching the web is expensive, only do so if you can't answer the question with the information available to you.
+Avoid long lists of points from search results.
+Don't address the user, don't ask further questions, don't repeat the user's question in the beginning of the answer.
+It's ok to just list the requested facts with no additional introduction.
+Use Telegram Markdown formatting.`;
+
 export const getInlineCompletion = async (prompt: string) => {
   debug(`triggered inline completion with prompt: ${prompt}`);
   return await openai.chat.completions
@@ -16,7 +25,7 @@ export const getInlineCompletion = async (prompt: string) => {
       messages: [
         {
           role: 'system',
-          content: `You are a question answering bot for the Telegram messenger. People call you with an inline query in their message and you answer the question right in the chat. The answer must be concise and to the point and contain only the facts requested. Don't address the user, don't ask further questions, don't repeat the words from the question. It's ok to start the answer with "because" or just list the requested facts with no additional words. Use Telegram Markdown formatting.`,
+          content: systemPrompt,
         },
         { role: 'user', content: prompt },
       ],
@@ -37,7 +46,7 @@ export const getMessageCompletion = async ({
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: `You are a question answering bot for the Telegram messenger. People call you with a message and you answer the question right in the chat. The answer must be concise and to the point and contain only the facts requested. Don't address the user, don't ask further questions, don't repeat the words from the question. It's ok to start the answer with "because" or just list the requested facts with no additional words. Use Telegram Markdown formatting.`,
+      content: systemPrompt,
     },
   ];
 
