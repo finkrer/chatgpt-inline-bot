@@ -38,8 +38,8 @@ bot.on('inline_query', async (ctx) => {
         title: 'Conversation',
         description: `${ctx.inlineQuery.query}\n\n${chatGptAnswer}`,
         input_message_content: {
-          message_text: `<b>❓ ${ctx.inlineQuery.query}</b>\n\n🤖 ${chatGptAnswer}`,
-          parse_mode: 'HTML',
+          message_text: `*❓ ${ctx.inlineQuery.query}*\n\n🤖 ${chatGptAnswer}`,
+          parse_mode: 'Markdown',
         },
       },
       {
@@ -49,7 +49,7 @@ bot.on('inline_query', async (ctx) => {
         description: chatGptAnswer,
         input_message_content: {
           message_text: chatGptAnswer,
-          parse_mode: 'HTML',
+          parse_mode: 'Markdown',
         },
       },
     ]);
