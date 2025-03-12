@@ -1,28 +1,27 @@
-import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from 'openai';
+import { OpenAI } from 'openai';
 import createDebug from 'debug';
+import { ChatCompletionMessageParam } from 'openai/resources';
 
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 const debug = createDebug('bot:inline_query');
 
 export const getInlineCompletion = async (prompt: string) => {
   debug(`triggered inline completion with prompt: ${prompt}`);
-  return await openai
-    .createChatCompletion({
-      model: 'gpt-4o-mini',
-      temperature: 0.7,
+  return await openai.chat.completions
+    .create({
+      model: 'gpt-4o-mini-search-preview-2025-03-11',
       messages: [
         {
           role: 'system',
-          content: `You are a question answering bot for the Telegram messenger. People call you with an inline query in their message and you answer the question right in the chat. The answer must be concise and to the point and contain only the facts requested. Don't address the user, don't ask further questions, don't repeat the words from the question. It's ok to start the answer with "because" or just list the requested facts with no additional words.`,
+          content: `You are a question answering bot for the Telegram messenger. People call you with an inline query in their message and you answer the question right in the chat. The answer must be concise and to the point and contain only the facts requested. Don't address the user, don't ask further questions, don't repeat the words from the question. It's ok to start the answer with "because" or just list the requested facts with no additional words. Use Telegram Markdown formatting.`,
         },
         { role: 'user', content: prompt },
       ],
     })
-    .then((data) => data.data.choices[0].message?.content as string);
+    .then((data) => data.choices[0].message?.content as string);
 };
 
 export const getMessageCompletion = async ({
@@ -35,10 +34,10 @@ export const getMessageCompletion = async ({
   isReplyToBot?: boolean;
 }) => {
   debug(`triggered message completion with prompt: ${query}`);
-  const messages: ChatCompletionRequestMessage[] = [
+  const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: `You are a question answering bot for the Telegram messenger. People call you with a message and you answer the question right in the chat. The answer must be concise and to the point and contain only the facts requested. Don't address the user, don't ask further questions, don't repeat the words from the question. It's ok to start the answer with "because" or just list the requested facts with no additional words.`,
+      content: `You are a question answering bot for the Telegram messenger. People call you with a message and you answer the question right in the chat. The answer must be concise and to the point and contain only the facts requested. Don't address the user, don't ask further questions, don't repeat the words from the question. It's ok to start the answer with "because" or just list the requested facts with no additional words. Use Telegram Markdown formatting.`,
     },
   ];
 
@@ -53,7 +52,7 @@ export const getMessageCompletion = async ({
     });
     messages.push({
       role: 'user',
-      content: query,
+      content: query!,
     });
   } else if (query && quotedMessage) {
     messages.push({
@@ -88,11 +87,10 @@ export const getMessageCompletion = async ({
     });
   }
 
-  return await openai
-    .createChatCompletion({
-      model: 'gpt-4o-mini',
-      temperature: 0.7,
+  return await openai.chat.completions
+    .create({
+      model: 'gpt-4o-mini-search-preview-2025-03-11',
       messages,
     })
-    .then((data) => data.data.choices[0].message?.content as string);
+    .then((data) => data.choices[0].message?.content as string);
 };

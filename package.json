@@ -1,13 +1,13 @@
 {
   "name": "chatgpt-inline-bot",
   "version": "0.1.0",
-  "description": "gpt-3.5-turbo inline question answering bot for telegram",
+  "description": "openai-based inline question answering bot for telegram",
   "main": "src/index.ts",
   "dependencies": {
     "@vercel/node": "^2.15.2",
     "dotenv-cli": "^7.2.1",
     "nanoid": "3",
-    "openai": "^3.3.0",
+    "openai": "^4.87.3",
     "telegraf": "^4.12.2"
   },
   "devDependencies": {
