@@ -8,11 +8,13 @@ const openai = new OpenAI({
 
 const debug = createDebug('bot:inline_query');
 
+const searchRedirectExplanation = `You can redirect the question to a model with search capabilities if you can't answer the question with the information available to you. To do so, answer with only the letter "s".`;
+
+const searchPrompt = `Avoid long lists of points from search results. Try to summarize the results in a concise answer.`;
+
 const systemPrompt = `You are a question answering bot for the Telegram messenger.
 People call you with a message and you answer the question right in the chat.
 The answer must be concise and to the point, can under no circumstances be longer than 350 characters, and must contain only the facts requested without expanding on them.
-Since searching the web is expensive, only do so if you can't answer the question with the information available to you.
-Avoid long lists of points from search results.
 Don't address the user, don't ask further questions, don't repeat the user's question in the beginning of the answer.
 It's ok to just list the requested facts with no additional introduction.
 Use Telegram Markdown formatting.`;
@@ -46,7 +48,7 @@ export const getMessageCompletion = async ({
   const messages: ChatCompletionMessageParam[] = [
     {
       role: 'system',
-      content: systemPrompt,
+      content: systemPrompt + '\n' + searchRedirectExplanation,
     },
   ];
 
@@ -96,10 +98,23 @@ export const getMessageCompletion = async ({
     });
   }
 
-  return await openai.chat.completions
+  const resultWithoutSearch = await openai.chat.completions
     .create({
-      model: 'gpt-4o-mini-search-preview-2025-03-11',
+      model: 'gpt-4o-mini',
       messages,
     })
     .then((data) => data.choices[0].message?.content as string);
+
+  if (resultWithoutSearch.startsWith('s')) {
+    messages[0].content = systemPrompt + '\n' + searchPrompt;
+    const resultWithSearch = await openai.chat.completions
+      .create({
+        model: 'gpt-4o-mini-search-preview-2025-03-11',
+        messages,
+      })
+      .then((data) => data.choices[0].message?.content as string);
+    return resultWithSearch;
+  }
+
+  return resultWithoutSearch;
 };
