@@ -108,6 +108,11 @@ bot.on('message', async (ctx) => {
     'reply_to_message' in ctx.message &&
     ctx.message.reply_to_message?.from?.username === ctx.botInfo.username;
 
+  // Early return if no bot name mentioned and not replying to bot
+  if (!startsWithBotName && !isBotName && !isReplyToBot) {
+    return;
+  }
+
   let query = '';
   let quotedMessage = '';
   let imageUrl = '';
