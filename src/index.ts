@@ -12,6 +12,20 @@ const bot = new Telegraf(BOT_TOKEN);
 
 const debug = createDebug('bot:inline_query');
 
+// Define bot names and their corresponding languages
+const botNames = {
+  ru: ['бот', 'бит', 'битингс'],
+  uk: ['бiт', 'біт'],
+  en: ['bot', 'bit', 'bitings'],
+};
+
+// Define image questions in different languages
+const imageQuestions = {
+  ru: 'Что изображено на этой картинке?',
+  uk: 'Що зображено на цій картинці?',
+  en: 'What is in this image?',
+};
+
 bot.on('inline_query', async (ctx) => {
   debug('Triggered inline query');
 
@@ -58,17 +72,6 @@ bot.on('inline_query', async (ctx) => {
   }
 });
 
-const botNames = [
-  'бот',
-  'бит',
-  'бiт',
-  'біт',
-  'bot',
-  'bit',
-  'битингс',
-  'bitings',
-];
-
 bot.on('message', async (ctx) => {
   debug(JSON.stringify(ctx.message, null, 2));
   const messageText = 'text' in ctx.message ? ctx.message.text : '';
@@ -82,14 +85,24 @@ bot.on('message', async (ctx) => {
       : '';
 
   // Check if the message starts with a bot name followed by a comma
-  const startsWithBotName = botNames.some((name) =>
-    messageText.toLowerCase().startsWith(`${name.toLowerCase()},`)
-  );
+  const startsWithBotName = Object.values(botNames)
+    .flat()
+    .some((name) =>
+      messageText.toLowerCase().startsWith(`${name.toLowerCase()},`)
+    );
 
   // Check if the message is just the bot name and is replying to another message
-  const isBotName = botNames.some(
-    (name) => messageText.toLowerCase() === name.toLowerCase()
-  );
+  const isBotName = Object.values(botNames)
+    .flat()
+    .some((name) => messageText.toLowerCase() === name.toLowerCase());
+
+  // Determine the language of the bot name
+  const botNameLanguage =
+    Object.entries(botNames).find(([_, names]) =>
+      names.some((name) =>
+        messageText.toLowerCase().includes(name.toLowerCase())
+      )
+    )?.[0] || 'en';
 
   const isReplyToBot =
     'reply_to_message' in ctx.message &&
@@ -97,6 +110,19 @@ bot.on('message', async (ctx) => {
 
   let query = '';
   let quotedMessage = '';
+  let imageUrl = '';
+
+  // Check if the replied-to message contains a photo
+  if ('reply_to_message' in ctx.message && ctx.message.reply_to_message) {
+    const repliedMessage = ctx.message.reply_to_message;
+    if ('photo' in repliedMessage && repliedMessage.photo.length > 0) {
+      // Get the largest photo size
+      const largestPhoto =
+        repliedMessage.photo[repliedMessage.photo.length - 1];
+      const file = await ctx.telegram.getFile(largestPhoto.file_id);
+      imageUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${file.file_path}`;
+    }
+  }
 
   if (isReplyToBot) {
     query = messageText;
@@ -106,16 +132,21 @@ bot.on('message', async (ctx) => {
     query = messageText.split(',')[1]?.trim();
     quotedMessage = replyText || '';
   } else if (isBotName) {
+    // When user just replies with bot name, we should process the image if present
+    if (imageUrl) {
+      query = imageQuestions[botNameLanguage as keyof typeof imageQuestions];
+    }
     quotedMessage = replyText || '';
   }
 
-  if (query || quotedMessage) {
+  if (query || quotedMessage || imageUrl) {
     let chatGptAnswer: string;
     try {
       chatGptAnswer = await getMessageCompletion({
         query,
         quotedMessage,
         isReplyToBot,
+        imageUrl,
       });
     } catch (err) {
       console.error('Error getting completion from OpenAI:', err);

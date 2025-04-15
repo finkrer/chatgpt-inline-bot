@@ -8,7 +8,7 @@ const openai = new OpenAI({
 
 const debug = createDebug('bot:inline_query');
 
-const searchRedirectExplanation = `You can redirect the question to a model with search capabilities if you can't answer the question with the information available to you. To do so, answer with only the letter "s".`;
+const searchRedirectExplanation = `If there is no image in the message, you can redirect the question to a model with search capabilities if you can't answer the question with the information available to you. To do so, answer with only the letter s. Don't do so if there is an image in the message, that model can't handle images.`;
 
 const searchPrompt = `Avoid long lists of points from search results. Try to summarize the results in a concise answer.`;
 
@@ -39,10 +39,12 @@ export const getMessageCompletion = async ({
   query,
   quotedMessage,
   isReplyToBot = false,
+  imageUrl,
 }: {
   query?: string;
   quotedMessage?: string;
   isReplyToBot?: boolean;
+  imageUrl?: string;
 }) => {
   debug(`triggered message completion with prompt: ${query}`);
   const messages: ChatCompletionMessageParam[] = [
@@ -96,6 +98,17 @@ export const getMessageCompletion = async ({
       role: 'user',
       content: quotedMessage,
     });
+  }
+
+  // Add image to the last user message if present
+  if (imageUrl) {
+    const lastUserMessage = messages[messages.length - 1];
+    if (lastUserMessage.role === 'user') {
+      lastUserMessage.content = [
+        { type: 'text', text: lastUserMessage.content as string },
+        { type: 'image_url', image_url: { url: imageUrl } },
+      ];
+    }
   }
 
   const resultWithoutSearch = await openai.chat.completions
