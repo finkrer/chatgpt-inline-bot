@@ -23,7 +23,7 @@ export const getInlineCompletion = async (prompt: string) => {
   debug(`triggered inline completion with prompt: ${prompt}`);
   return await openai.chat.completions
     .create({
-      model: 'gpt-4o-mini-search-preview-2025-03-11',
+      model: 'o4-mini',
       messages: [
         {
           role: 'system',
@@ -113,7 +113,7 @@ export const getMessageCompletion = async ({
 
   const resultWithoutSearch = await openai.chat.completions
     .create({
-      model: 'gpt-4o-mini',
+      model: 'o4-mini',
       messages,
     })
     .then((data) => data.choices[0].message?.content as string);
@@ -122,7 +122,7 @@ export const getMessageCompletion = async ({
     messages[0].content = systemPrompt + '\n' + searchPrompt;
     const resultWithSearch = await openai.chat.completions
       .create({
-        model: 'gpt-4o-mini-search-preview-2025-03-11',
+        model: 'gpt-4o-mini-search-preview',
         messages,
       })
       .then((data) => data.choices[0].message?.content as string);
