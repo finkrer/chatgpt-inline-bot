@@ -31,6 +31,7 @@ export const getInlineCompletion = async (prompt: string) => {
         },
         { role: 'user', content: prompt },
       ],
+      reasoning_effort: 'minimal',
     })
     .then((data) => data.choices[0].message?.content as string);
 };
@@ -115,6 +116,7 @@ export const getMessageCompletion = async ({
     .create({
       model: 'gpt-5-mini',
       messages,
+      reasoning_effort: 'minimal',
     })
     .then((data) => data.choices[0].message?.content as string);
 
