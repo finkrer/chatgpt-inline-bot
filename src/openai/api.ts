@@ -1,6 +1,6 @@
 import { OpenAI } from 'openai';
 import createDebug from 'debug';
-import { ChatCompletionMessageParam } from 'openai/resources';
+import type { EasyInputMessage } from 'openai/resources/responses/responses';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -8,9 +8,7 @@ const openai = new OpenAI({
 
 const debug = createDebug('bot:inline_query');
 
-const searchRedirectExplanation = `If there is no image in the message, you can redirect the question to a model with search capabilities if you can't answer the question with the information available to you. To do so, answer with only the letter s. Don't do so if there is an image in the message, that model can't handle images.`;
-
-const searchPrompt = `Avoid long lists of points from search results. Try to summarize the results in a concise answer.`;
+const searchPrompt = `If you need current information that you don't have, use the web search tool. Avoid long lists of points from search results. Try to summarize the results in a concise answer.`;
 
 const systemPrompt = `You are a question answering bot for the Telegram messenger.
 People call you with a message and you answer the question right in the chat.
@@ -31,7 +29,7 @@ export const getInlineCompletion = async (prompt: string) => {
         },
         { role: 'user', content: prompt },
       ],
-      reasoning_effort: 'minimal',
+      reasoning_effort: 'low',
     })
     .then((data) => data.choices[0].message?.content as string);
 };
@@ -48,88 +46,70 @@ export const getMessageCompletion = async ({
   imageUrl?: string;
 }) => {
   debug(`triggered message completion with prompt: ${query}`);
-  const messages: ChatCompletionMessageParam[] = [
-    {
-      role: 'system',
-      content: systemPrompt + '\n' + searchRedirectExplanation,
-    },
-  ];
+  const systemMessages: string[] = [systemPrompt + '\n' + searchPrompt];
+  const inputItems: EasyInputMessage[] = [];
 
   if (isReplyToBot) {
-    messages.push({
-      role: 'system',
-      content: `The user answered to your message.`,
-    });
-    messages.push({
+    systemMessages.push(`The user answered to your message.`);
+    inputItems.push({
+      type: 'message',
       role: 'assistant',
-      content: quotedMessage,
+      content: quotedMessage!,
     });
-    messages.push({
+    inputItems.push({
+      type: 'message',
       role: 'user',
       content: query!,
     });
   } else if (query && quotedMessage) {
-    messages.push({
-      role: 'system',
-      content: `The user asked you a question about another message.`,
-    });
-    messages.push({
+    systemMessages.push(`The user asked you a question about another message.`);
+    inputItems.push({
+      type: 'message',
       role: 'user',
       content: query,
     });
-    messages.push({
+    inputItems.push({
+      type: 'message',
       role: 'user',
       content: quotedMessage,
     });
   } else if (query) {
-    messages.push({
-      role: 'system',
-      content: `The user asked you a question.`,
-    });
-    messages.push({
+    systemMessages.push(`The user asked you a question.`);
+    inputItems.push({
+      type: 'message',
       role: 'user',
       content: query,
     });
   } else if (quotedMessage) {
-    messages.push({
-      role: 'system',
-      content: `The user wants you to comment on another message. It may contain an instruction to follow, a question to answer, a topic to explain or perhaps a claim to verify.`,
-    });
-    messages.push({
+    systemMessages.push(
+      `The user wants you to comment on another message. It may contain an instruction to follow, a question to answer, a topic to explain or perhaps a claim to verify.`
+    );
+    inputItems.push({
+      type: 'message',
       role: 'user',
       content: quotedMessage,
     });
   }
 
-  // Add image to the last user message if present
   if (imageUrl) {
-    const lastUserMessage = messages[messages.length - 1];
-    if (lastUserMessage.role === 'user') {
-      lastUserMessage.content = [
-        { type: 'text', text: lastUserMessage.content as string },
-        { type: 'image_url', image_url: { url: imageUrl } },
+    const lastUserItem = inputItems[inputItems.length - 1];
+    if (lastUserItem && lastUserItem.role === 'user') {
+      const textContent =
+        typeof lastUserItem.content === 'string' ? lastUserItem.content : '';
+      lastUserItem.content = [
+        { type: 'input_text', text: textContent },
+        { type: 'input_image', image_url: imageUrl, detail: 'auto' },
       ];
     }
   }
 
-  const resultWithoutSearch = await openai.chat.completions
-    .create({
-      model: 'gpt-5-mini',
-      messages,
-      reasoning_effort: 'minimal',
-    })
-    .then((data) => data.choices[0].message?.content as string);
+  const response = await openai.responses.create({
+    model: 'gpt-5-mini',
+    instructions: systemMessages.join('\n'),
+    input: inputItems,
+    tools: [{ type: 'web_search' }],
+    reasoning: { effort: 'low' },
+  });
 
-  if (resultWithoutSearch.startsWith('s')) {
-    messages[0].content = systemPrompt + '\n' + searchPrompt;
-    const resultWithSearch = await openai.chat.completions
-      .create({
-        model: 'gpt-4o-mini-search-preview',
-        messages,
-      })
-      .then((data) => data.choices[0].message?.content as string);
-    return resultWithSearch;
-  }
-
-  return resultWithoutSearch;
+  return response.output_text;
 };

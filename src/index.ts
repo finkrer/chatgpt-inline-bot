@@ -145,14 +145,22 @@ bot.on('message', async (ctx) => {
   }
 
   if (query || quotedMessage || imageUrl) {
+    await ctx.sendChatAction('typing');
+
     let chatGptAnswer: string;
     try {
+      const typingInterval = setInterval(() => {
+        ctx.sendChatAction('typing').catch(() => {});
+      }, 3000);
+
       chatGptAnswer = await getMessageCompletion({
         query,
         quotedMessage,
         isReplyToBot,
         imageUrl,
       });
+
+      clearInterval(typingInterval);
     } catch (err) {
       console.error('Error getting completion from OpenAI:', err);
       return;
