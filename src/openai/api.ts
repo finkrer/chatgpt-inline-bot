@@ -29,7 +29,7 @@ export const getInlineCompletion = async (prompt: string) => {
         },
         { role: 'user', content: prompt },
       ],
-      reasoning_effort: 'low',
+      reasoning_effort: 'none',
     })
     .then((data) => data.choices[0].message?.content as string);
 };
@@ -108,7 +108,7 @@ export const getMessageCompletion = async ({
     instructions: systemMessages.join('\n'),
     input: inputItems,
     // tools: [{ type: 'web_search' }],
-    reasoning: { effort: 'low' },
+    reasoning: { effort: 'none' },
   });
 
   return response.output_text;
