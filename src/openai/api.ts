@@ -107,7 +107,7 @@ export const getMessageCompletion = async ({
     model: 'gpt-5-mini',
     instructions: systemMessages.join('\n'),
     input: inputItems,
-    tools: [{ type: 'web_search' }],
+    // tools: [{ type: 'web_search' }],
     reasoning: { effort: 'low' },
   });
 
