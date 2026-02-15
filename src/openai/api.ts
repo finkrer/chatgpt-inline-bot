@@ -1,4 +1,5 @@
 import { OpenAI } from 'openai';
+import Exa from 'exa-js';
 import createDebug from 'debug';
 import type { EasyInputMessage } from 'openai/resources/responses/responses';
 
@@ -6,16 +7,19 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const debug = createDebug('bot:inline_query');
+const exa = new Exa(process.env.EXA_API_KEY);
 
-const searchPrompt = `If you need current information that you don't have, use the web search tool. Avoid long lists of points from search results. Try to summarize the results in a concise answer.`;
+const debug = createDebug('bot:inline_query');
 
 const systemPrompt = `You are a question answering bot for the Telegram messenger.
 People call you with a message and you answer the question right in the chat.
 The answer must be concise and to the point, can under no circumstances be longer than 350 characters, and must contain only the facts requested without expanding on them.
 Don't address the user, don't ask further questions, don't repeat the user's question in the beginning of the answer.
 It's ok to just list the requested facts with no additional introduction.
+Your answer must be casual and conversational, you are in a friend group's chat with a bunch of people. Try to match the user's tone of voice and style of writing.
 Use Telegram Markdown formatting.`;
+
+const searchPrompt = `If you need current information that you don't have, use the search tool. Avoid long lists of points from search results. Try to summarize the results in a concise answer. Provide links and additional context when necessary.`;
 
 export const getInlineCompletion = async (prompt: string) => {
   debug(`triggered inline completion with prompt: ${prompt}`);
@@ -29,7 +33,7 @@ export const getInlineCompletion = async (prompt: string) => {
         },
         { role: 'user', content: prompt },
       ],
-      reasoning_effort: 'none',
+      reasoning_effort: 'low',
     })
     .then((data) => data.choices[0].message?.content as string);
 };
@@ -103,13 +107,67 @@ export const getMessageCompletion = async ({
     }
   }
 
-  const response = await openai.responses.create({
+  const searchTool = {
+    type: 'function' as const,
+    name: 'search',
+    description: 'Search the web for current information',
+    strict: true,
+    parameters: {
+      type: 'object' as const,
+      properties: {
+        query: { type: 'string' as const, description: 'Search query' },
+      },
+      required: ['query'] as const,
+      additionalProperties: false as const,
+    },
+  };
+
+  let response = await openai.responses.create({
     model: 'gpt-5-mini',
     instructions: systemMessages.join('\n'),
     input: inputItems,
-    // tools: [{ type: 'web_search' }],
-    reasoning: { effort: 'none' },
+    tools: [searchTool],
+    reasoning: { effort: 'low' },
   });
+
+  while (true) {
+    const functionCall = response.output.find(
+      (item) => item.type === 'function_call'
+    );
+    if (!functionCall || functionCall.type !== 'function_call') break;
+
+    const { query } = JSON.parse(functionCall.arguments);
+    debug(`searching exa for: ${query}`);
+
+    const results = await exa.search(query, {
+      type: 'auto',
+      numResults: 5,
+      contents: {
+        highlights: { maxCharacters: 2000 },
+      },
+    });
+
+    const searchOutput = results.results
+      .map((r) => `${r.title}: ${r.url}\n${r.highlights?.join('\n')}`)
+      .join('\n\n');
+
+    debug(`exa results:\n${searchOutput}`);
+
+    response = await openai.responses.create({
+      model: 'gpt-5-mini',
+      instructions: systemMessages.join('\n'),
+      previous_response_id: response.id,
+      input: [
+        {
+          type: 'function_call_output',
+          call_id: functionCall.call_id,
+          output: searchOutput,
+        },
+      ],
+      tools: [searchTool],
+      reasoning: { effort: 'low' },
+    });
+  }
 
   return response.output_text;
 };
