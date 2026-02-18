@@ -9,6 +9,7 @@
     "exa-js": "^2.4.0",
     "nanoid": "3",
     "openai": "^6.10.0",
+    "redis": "^5.11.0",
     "telegraf": "^4.12.2"
   },
   "devDependencies": {

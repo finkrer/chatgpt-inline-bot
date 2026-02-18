@@ -43,17 +43,26 @@ export const getMessageCompletion = async ({
   quotedMessage,
   isReplyToBot = false,
   imageUrl,
+  previousResponseId,
 }: {
   query?: string;
   quotedMessage?: string;
   isReplyToBot?: boolean;
   imageUrl?: string;
+  previousResponseId?: string | null;
 }) => {
   debug(`triggered message completion with prompt: ${query}`);
   const systemMessages: string[] = [systemPrompt + '\n' + searchPrompt];
   const inputItems: EasyInputMessage[] = [];
 
-  if (isReplyToBot) {
+  if (isReplyToBot && previousResponseId) {
+    systemMessages.push(`The user answered to your message.`);
+    inputItems.push({
+      type: 'message',
+      role: 'user',
+      content: query!,
+    });
+  } else if (isReplyToBot) {
     systemMessages.push(`The user answered to your message.`);
     inputItems.push({
       type: 'message',
@@ -125,6 +134,7 @@ export const getMessageCompletion = async ({
   let response = await openai.responses.create({
     model: 'gpt-5-mini',
     instructions: systemMessages.join('\n'),
+    ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
     input: inputItems,
     tools: [searchTool],
     reasoning: { effort: 'low' },
@@ -169,5 +179,5 @@ export const getMessageCompletion = async ({
     });
   }
 
-  return response.output_text;
+  return { text: response.output_text, responseId: response.id };
 };

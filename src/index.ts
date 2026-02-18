@@ -4,6 +4,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { development, production } from './core';
 import { nanoid } from 'nanoid';
 import { getInlineCompletion, getMessageCompletion } from './openai/api';
+import { getResponseId, setResponseId } from './storage';
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const ENVIRONMENT = process.env.NODE_ENV || '';
@@ -147,18 +148,31 @@ bot.on('message', async (ctx) => {
   if (query || quotedMessage || imageUrl) {
     await ctx.sendChatAction('typing');
 
+    const chatId = ctx.chat.id;
+    const repliedToMessageId =
+      'reply_to_message' in ctx.message
+        ? ctx.message.reply_to_message?.message_id
+        : undefined;
+
+    const previousResponseId =
+      isReplyToBot && repliedToMessageId
+        ? await getResponseId(chatId, repliedToMessageId)
+        : null;
+
     let chatGptAnswer: string;
+    let responseId: string;
     try {
       const typingInterval = setInterval(() => {
         ctx.sendChatAction('typing').catch(() => {});
       }, 3000);
 
-      chatGptAnswer = await getMessageCompletion({
+      ({ text: chatGptAnswer, responseId } = await getMessageCompletion({
         query,
         quotedMessage,
         isReplyToBot,
         imageUrl,
-      });
+        previousResponseId,
+      }));
 
       clearInterval(typingInterval);
     } catch (err) {
@@ -167,16 +181,21 @@ bot.on('message', async (ctx) => {
     }
 
     try {
-      // Reply with the generated answer
-      return await ctx.reply(chatGptAnswer, {
+      const sentMessage = await ctx.reply(chatGptAnswer, {
         parse_mode: 'Markdown',
         disable_web_page_preview: true,
         reply_to_message_id: query
           ? ctx.message.message_id
-          : 'reply_to_message' in ctx.message
-          ? ctx.message.reply_to_message?.message_id
-          : undefined,
+          : repliedToMessageId,
       });
+
+      setResponseId(chatId, sentMessage.message_id, responseId).catch(
+        (err) => {
+          console.error('Error saving response ID to Redis:', err);
+        }
+      );
+
+      return sentMessage;
     } catch (err) {
       console.error('Error sending reply:', err);
     }
