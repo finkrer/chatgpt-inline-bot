@@ -25,7 +25,7 @@ export const getInlineCompletion = async (prompt: string) => {
   debug(`triggered inline completion with prompt: ${prompt}`);
   return await openai.chat.completions
     .create({
-      model: 'gpt-5-mini',
+      model: 'gpt-5.4-mini',
       messages: [
         {
           role: 'system',
@@ -33,7 +33,7 @@ export const getInlineCompletion = async (prompt: string) => {
         },
         { role: 'user', content: prompt },
       ],
-      reasoning_effort: 'low',
+      reasoning_effort: 'none',
     })
     .then((data) => data.choices[0].message?.content as string);
 };
@@ -132,12 +132,12 @@ export const getMessageCompletion = async ({
   };
 
   let response = await openai.responses.create({
-    model: 'gpt-5-mini',
+    model: 'gpt-5.4-mini',
     instructions: systemMessages.join('\n'),
     ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
     input: inputItems,
     tools: [searchTool],
-    reasoning: { effort: 'low' },
+    reasoning: { effort: 'none' },
   });
 
   while (true) {
@@ -164,7 +164,7 @@ export const getMessageCompletion = async ({
     debug(`exa results:\n${searchOutput}`);
 
     response = await openai.responses.create({
-      model: 'gpt-5-mini',
+      model: 'gpt-5.4-mini',
       instructions: systemMessages.join('\n'),
       previous_response_id: response.id,
       input: [
@@ -175,7 +175,7 @@ export const getMessageCompletion = async ({
         },
       ],
       tools: [searchTool],
-      reasoning: { effort: 'low' },
+      reasoning: { effort: 'none' },
     });
   }
 
