@@ -829,10 +829,10 @@ openai@^5.0.1:
   resolved "https://registry.yarnpkg.com/openai/-/openai-5.23.2.tgz#f13e2dc2ef6b88aab6a9b97cdc68d41a1d083c68"
   integrity sha512-MQBzmTulj+MM5O8SKEk/gL8a7s5mktS9zUtAkU257WjvobGc9nKcBuVwjyEEcb9SI8a8Y2G/mzn3vm9n1Jlleg==
 
-openai@^7.2.0:
-  version "7.2.0"
-  resolved "https://registry.yarnpkg.com/openai/-/openai-7.2.0.tgz#d56700a50d715f5a8621dc56140bd2e6120dff75"
-  integrity sha512-/P0jZP2WDSwSuiilTTcU4mkepzdSAiRrnTK2e9pk9KOzBoE3L9aHz2oIyIXqGbqnnMsGC0Izr223MOUhG2JuvQ==
+openai@^7.22.0:
+  version "7.22.0"
+  resolved "https://registry.yarnpkg.com/openai/-/openai-7.22.0.tgz#e543c92d2b7bc0bcde7ae8847b64ddc74ee4cba8"
+  integrity sha512-C4bv09YtQQb1qcFrEAENJXkuCZA72kGRwws6QIXgf0oJW6pDOmDC2WaZpQVII3Rl+RNE3Z+TQI92uNfetGwY3w==
 
 p-timeout@^4.1.0:
   version "4.1.0"

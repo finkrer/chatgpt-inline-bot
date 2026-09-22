@@ -25,7 +25,7 @@ export const getInlineCompletion = async (prompt: string) => {
   debug(`triggered inline completion with prompt: ${prompt}`);
   return await openai.chat.completions
     .create({
-      model: 'gpt-5.6-luna',
+      model: 'gpt-6-luna',
       messages: [
         {
           role: 'system',
@@ -132,7 +132,7 @@ export const getMessageCompletion = async ({
   };
 
   let response = await openai.responses.create({
-    model: 'gpt-5.6-luna',
+    model: 'gpt-6-luna',
     instructions: systemMessages.join('\n'),
     ...(previousResponseId ? { previous_response_id: previousResponseId } : {}),
     input: inputItems,
@@ -164,7 +164,7 @@ export const getMessageCompletion = async ({
     debug(`exa results:\n${searchOutput}`);
 
     response = await openai.responses.create({
-      model: 'gpt-5.6-luna',
+      model: 'gpt-6-luna',
       instructions: systemMessages.join('\n'),
       previous_response_id: response.id,
       input: [
